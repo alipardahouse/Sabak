@@ -41,6 +41,12 @@ jobs:
           mkdir -p dist
           cp platforms/android/app/build/outputs/apk/debug/app-debug.apk dist/StudyLibrary.apk
 
+      - name: Show Android color and string resources (only if build failed)
+        if: failure()
+        run: |
+          cat platforms/android/app/src/main/res/values/colors.xml || true
+          cat platforms/android/app/src/main/res/values/strings.xml || true
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
