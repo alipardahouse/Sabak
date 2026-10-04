@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: gap: https://ssl.gstatic.com 'unsafe-eval'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; media-src *; img-src 'self' data: blob:">
+  <title>Study Library</title>
+  <style>
+:root {
+  --paper: #f6f7f9;
+  --ink: #1b2330;
+  --muted: #5d6877;
+  --books: #23395d;
+  --assignments: #2d6a4f;
+  --line: #dde1e7;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+
+.screen { display: none; position: absolute; inset: 0; flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.screen.active { display: flex; }
+
+/* Home */
+.home-inner { margin: auto 0; padding: 28px 24px; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: 2rem; margin: 0; letter-spacing: -0.02em; }
+.sub { margin: 0 0 12px; color: var(--muted); line-height: 1.4; max-width: 30ch; }
+.big { border: 0; border-radius: 14px; color: #fff; text-align: left; padding: 30px 24px;
+  font-size: 1.6rem; font-weight: 700; display: flex; flex-direction: column; gap: 6px; }
+.big span { font-size: 0.95rem; font-weight: 400; opacity: .8; }
+.big:active { transform: scale(.98); }
+.books { background: var(--books); }
+.assignments { background: var(--assignments); }
+
+/* Header + list */
+header { display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+  border-bottom: 1px solid var(--line); background: #fff; }
+header h2 { font-size: 1.1rem; margin: 0; font-weight: 600; }
+.back { border: 0; background: none; font-size: 1.6rem; padding: 4px 10px; color: var(--ink); }
+#items { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+#items li { padding: 18px 20px; border-bottom: 1px solid var(--line); font-size: 1.05rem; background: #fff; }
+#items li:active { background: #eceff3; }
+
+/* Viewer */
+#viewer { background: #3a3f47; }
+#scroller { flex: 1; overflow: auto; touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; }
+#pages { width: 100%; }
+.page { display: block; width: 100%; background: #fff; margin: 0 0 8px; }
+#status { position: absolute; left: 0; right: 0; bottom: 70px; text-align: center; color: #fff;
+  pointer-events: none; font-size: .95rem; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+
+</style>
+</head>
+<body>
+
+  <section id="home" class="screen active">
+    <div class="home-inner">
+      <h1>Study Library</h1>
+      <p class="sub">Everything is stored on this phone. No internet needed.</p>
+      <button class="big books" data-group="books">Books<span id="count-books"></span></button>
+      <button class="big assignments" data-group="assignments">Assignments<span id="count-assignments"></span></button>
+    </div>
+  </section>
+
+  <section id="list" class="screen">
+    <header><button class="back" aria-label="Back">&#8592;</button><h2 id="list-title"></h2></header>
+    <ul id="items"></ul>
+  </section>
+
+  <section id="viewer" class="screen">
+    <header><button class="back" aria-label="Back">&#8592;</button><h2 id="viewer-title"></h2></header>
+    <div id="scroller"><div id="pages"></div></div>
+    <div id="status"></div>
+  </section>
+
+  <script src="cordova.js"></script>
+  <script src="lib/pdf.min.js"></script>
+  <script>
+/* =====================  YAHAN APNI FILES LIKHEIN  =====================
+   Har line = ek PDF.
+     title : app mein jo naam dikhana hai (kuch bhi likh sakte hain)
+     file  : pdf folder ke andar file ka asli naam (.pdf ke saath)
+
+   - Nayi file add karni ho: ek line copy karein, title aur file badal dein.
+   - File hatani ho: uski line delete kar dein.
+   - Files kitni bhi ho sakti hain (10 hona zaroori nahi).
+   - Har line ke end mein comma (,) zaroor rakhein.
+======================================================================= */
+var PDF_FOLDER = 'pdf';
+
+var BOOKS = [
+  { title: 'QUANTITATIVE REASONING-I', file: 'QUANTITATIVE REASONING-I.pdf' },
+  { title: 'Book 2', file: 'book02.pdf' },
+  { title: 'Book 3', file: 'book03.pdf' },
+  { title: 'Book 4', file: 'book04.pdf' },
+  { title: 'Book 5', file: 'book05.pdf' },
+  { title: 'Book 6', file: 'book06.pdf' },
+  { title: 'Book 7', file: 'book07.pdf' },
+  { title: 'Book 8', file: 'book08.pdf' },
+  { title: 'Book 9', file: 'book09.pdf' },
+  { title: 'Book 10', file: 'book10.pdf' },
+];
+
+var ASSIGNMENTS = [
+  { title: 'Assignment 1', file: 'assignment01.pdf' },
+  { title: 'Assignment 2', file: 'assignment02.pdf' },
+  { title: 'Assignment 3', file: 'assignment03.pdf' },
+  { title: 'Assignment 4', file: 'assignment04.pdf' },
+  { title: 'Assignment 5', file: 'assignment05.pdf' },
+  { title: 'Assignment 6', file: 'assignment06.pdf' },
+  { title: 'Assignment 7', file: 'assignment07.pdf' },
+  { title: 'Assignment 8', file: 'assignment08.pdf' },
+  { title: 'Assignment 9', file: 'assignment09.pdf' },
+  { title: 'Assignment 10', file: 'assignment10.pdf' },
+];
+
+/* ===================  Iske neeche kuch change na karein  =================== */
+function withFolder(list) {
+  return list.map(function (x) { return { title: x.title, file: PDF_FOLDER + '/' + x.file }; });
+}
+var LIBRARY = {
+  books:       { title: 'Books',       items: withFolder(BOOKS) },
+  assignments: { title: 'Assignments', items: withFolder(ASSIGNMENTS) }
+};
+document.getElementById('count-books').textContent = BOOKS.length + ' PDFs';
+document.getElementById('count-assignments').textContent = ASSIGNMENTS.length + ' PDFs';
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var current = 'home';
+  var currentGroup = null;
+
+  function show(name) {
+    document.querySelectorAll('.screen').forEach(function (s) { s.classList.remove('active'); });
+    $(name).classList.add('active');
+    current = name;
+  }
+
+  /* ---------- navigation ---------- */
+  document.querySelectorAll('.big').forEach(function (b) {
+    b.addEventListener('click', function () { openList(b.getAttribute('data-group')); });
+  });
+  document.querySelectorAll('.back').forEach(function (b) {
+    b.addEventListener('click', goBack);
+  });
+
+  function goBack() {
+    if (current === 'viewer') { closeViewer(); show('list'); }
+    else if (current === 'list') { show('home'); }
+    else if (navigator.app && navigator.app.exitApp) { navigator.app.exitApp(); }
+  }
+  document.addEventListener('deviceready', function () {
+    document.addEventListener('backbutton', goBack, false);
+  }, false);
+
+  function openList(group) {
+    currentGroup = group;
+    var data = LIBRARY[group];
+    $('list-title').textContent = data.title;
+    var ul = $('items');
+    ul.innerHTML = '';
+    data.items.forEach(function (item) {
+      var li = document.createElement('li');
+      li.textContent = item.title;
+      li.addEventListener('click', function () { openPdf(item); });
+      ul.appendChild(li);
+    });
+    show('list');
+  }
+
+  /* ---------- PDF viewer ---------- */
+  if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+
+  var MAX_PX = 3000;
+  var scroller = $('scroller'), pagesEl = $('pages'), statusEl = $('status');
+  var pdfDoc = null, pageObjs = [], zoom = 1, renderTimer = null, loadToken = 0;
+
+  function flash(msg, ms) {
+    statusEl.textContent = msg;
+    if (ms) setTimeout(function () { if (statusEl.textContent === msg) statusEl.textContent = ''; }, ms);
+  }
+
+  function closeViewer() {
+    loadToken++;
+    pageObjs.forEach(function (p) { if (p.task) { try { p.task.cancel(); } catch (e) {} } });
+    if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null; }
+    pageObjs = [];
+    pagesEl.innerHTML = '';
+    statusEl.textContent = '';
+  }
+
+  function openPdf(item) {
+    // Only when the page is opened straight from a PC folder (file://) does the browser's own viewer
+    // open in a new tab. Inside the APK (and with ?viewer=1 on a local server) the built-in viewer is used.
+    var onPcFile = location.protocol === 'file:' && location.href.indexOf('android_asset') === -1;
+    if (onPcFile && !/[?&]viewer/.test(location.search)) { window.open(encodeURI(item.file), '_blank'); return; }
+    if (!window.pdfjsLib) { alert('PDF reader is missing: lib/pdf.min.js was not found.'); return; }
+    closeViewer();
+    var token = loadToken;
+    zoom = 1;
+    pagesEl.style.width = '100%';
+    scroller.scrollTop = 0; scroller.scrollLeft = 0;
+    $('viewer-title').textContent = item.title;
+    show('viewer');
+    flash('Opening…');
+
+    pdfjsLib.getDocument({ url: encodeURI(item.file) }).promise.then(function (doc) {
+      if (token !== loadToken) { doc.destroy(); return; }
+      pdfDoc = doc;
+      var chain = Promise.resolve();
+      for (var n = 1; n <= doc.numPages; n++) {
+        (function (num) {
+          chain = chain.then(function () { return doc.getPage(num); }).then(function (page) {
+            if (token !== loadToken) return;
+            var vp = page.getViewport({ scale: 1 });
+            var canvas = document.createElement('canvas');
+            canvas.className = 'page';
+            canvas.width = 1; canvas.height = 1;
+            canvas.style.aspectRatio = vp.width + ' / ' + vp.height;
+            pagesEl.appendChild(canvas);
+            pageObjs.push({ page: page, canvas: canvas, baseWidth: vp.width, renderedPx: 0, task: null });
+          });
+        })(n);
+      }
+      return chain;
+    }).then(function () {
+      if (token !== loadToken) return;
+      flash('');
+      renderVisible();
+    }).catch(function (err) {
+      if (token !== loadToken) return;
+      flash('This file could not be opened: ' + ((err && err.message) || err));
+    });
+  }
+
+  function targetPx() {
+    var dpr = window.devicePixelRatio || 1;
+    return Math.min(Math.round(scroller.clientWidth * zoom * dpr), MAX_PX);
+  }
+
+  function renderPage(p, px) {
+    if (p.renderedPx === px) return;
+    if (p.task) { try { p.task.cancel(); } catch (e) {} }
+    var vp = p.page.getViewport({ scale: px / p.baseWidth });
+    var off = document.createElement('canvas');
+    off.width = Math.floor(vp.width); off.height = Math.floor(vp.height);
+    var task = p.page.render({ canvasContext: off.getContext('2d'), viewport: vp });
+    p.task = task;
+    task.promise.then(function () {
+      p.canvas.width = off.width; p.canvas.height = off.height;
+      p.canvas.getContext('2d').drawImage(off, 0, 0);
+      p.renderedPx = px;
+      p.task = null;
+    }).catch(function () {});
+  }
+
+  function releasePage(p) {
+    if (p.task) { try { p.task.cancel(); } catch (e) {} p.task = null; }
+    if (p.renderedPx) { p.canvas.width = 1; p.canvas.height = 1; p.renderedPx = 0; }
+  }
+
+  function renderVisible() {
+    if (!pageObjs.length) return;
+    var top = scroller.getBoundingClientRect().top;
+    var h = scroller.clientHeight;
+    var px = targetPx();
+    pageObjs.forEach(function (p) {
+      var r = p.canvas.getBoundingClientRect();
+      var rel = r.top - top;
+      if (rel < h * 1.5 && rel + r.height > -h * 1.5) renderPage(p, px);
+      else if (rel < h * 4 && rel + r.height > -h * 4) { /* keep as is */ }
+      else releasePage(p);
+    });
+  }
+
+  var scrollTimer = null;
+  scroller.addEventListener('scroll', function () {
+    if (scrollTimer) return;
+    scrollTimer = setTimeout(function () { scrollTimer = null; renderVisible(); }, 120);
+  });
+
+  /* ---------- pinch to zoom ---------- */
+  var pinch = null;
+  function dist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+
+  scroller.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) {
+      pinch = { d0: dist(e.touches), z0: zoom };
+    }
+  }, { passive: true });
+
+  scroller.addEventListener('touchmove', function (e) {
+    if (!pinch || e.touches.length !== 2) return;
+    e.preventDefault();
+    var rect = scroller.getBoundingClientRect();
+    var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+    var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+    var fx = (scroller.scrollLeft + cx) / scroller.scrollWidth;
+    var fy = (scroller.scrollTop + cy) / scroller.scrollHeight;
+    zoom = Math.max(1, Math.min(5, pinch.z0 * dist(e.touches) / pinch.d0));
+    pagesEl.style.width = (zoom * 100) + '%';
+    scroller.scrollLeft = fx * scroller.scrollWidth - cx;
+    scroller.scrollTop = fy * scroller.scrollHeight - cy;
+  }, { passive: false });
+
+  // PC testing: Ctrl + mouse wheel (or touchpad pinch) zooms like a pinch on the phone.
+  scroller.addEventListener('wheel', function (e) {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    var rect = scroller.getBoundingClientRect();
+    var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+    var fx = (scroller.scrollLeft + cx) / scroller.scrollWidth;
+    var fy = (scroller.scrollTop + cy) / scroller.scrollHeight;
+    zoom = Math.max(1, Math.min(5, zoom * Math.exp(-e.deltaY * 0.01)));
+    pagesEl.style.width = (zoom * 100) + '%';
+    scroller.scrollLeft = fx * scroller.scrollWidth - cx;
+    scroller.scrollTop = fy * scroller.scrollHeight - cy;
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(renderVisible, 250);
+  }, { passive: false });
+
+  function endPinch(e) {
+    if (pinch && e.touches.length < 2) {
+      pinch = null;
+      clearTimeout(renderTimer);
+      renderTimer = setTimeout(renderVisible, 250);
+    }
+  }
+  scroller.addEventListener('touchend', endPinch, { passive: true });
+  scroller.addEventListener('touchcancel', endPinch, { passive: true });
+})();
+
+</script>
+</body>
+</html>
