@@ -90,7 +90,7 @@ header h2 { font-size: 1.1rem; margin: 0; font-weight: 600; }
 var PDF_FOLDER = 'pdf';
 
 var BOOKS = [
-  { title: 'QUANTITATIVE REASONING-I', file: 'QUANTITATIVE REASONING-I.pdf' },
+  { title: 'Book 1', file: 'book01.pdf' },
   { title: 'Book 2', file: 'book02.pdf' },
   { title: 'Book 3', file: 'book03.pdf' },
   { title: 'Book 4', file: 'book04.pdf' },
@@ -165,6 +165,12 @@ document.getElementById('count-assignments').textContent = ASSIGNMENTS.length + 
       li.addEventListener('click', function () { openPdf(item); });
       ul.appendChild(li);
     });
+    if (!data.items.length) {
+      var empty = document.createElement('li');
+      empty.textContent = 'No files added yet.';
+      empty.style.color = '#5d6877';
+      ul.appendChild(empty);
+    }
     show('list');
   }
 
