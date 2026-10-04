@@ -7,7 +7,6 @@
     <content src="index.html" />
     <allow-intent href="" />
     <preference name="Orientation" value="default" />
-    <preference name="BackgroundColor" value="0xfff6f7f9" />
     <platform name="android">
         <preference name="android-minSdkVersion" value="24" />
     </platform>
