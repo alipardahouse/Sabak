@@ -1,0 +1,50 @@
+name: Build APK and publish release
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Add PDF.js (offline PDF reader)
+        run: |
+          npm install
+          mkdir -p www/lib
+          cp node_modules/pdfjs-dist/build/pdf.min.js        www/lib/pdf.min.js
+          cp node_modules/pdfjs-dist/build/pdf.worker.min.js www/lib/pdf.worker.min.js
+
+      - name: Install Cordova and add Android platform
+        run: |
+          npm install -g cordova@12
+          cordova platform add android@13
+
+      - name: Build APK
+        run: |
+          cordova build android --debug
+          mkdir -p dist
+          cp platforms/android/app/build/outputs/apk/debug/app-debug.apk dist/StudyLibrary.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Study Library v1.0.${{ github.run_number }}
+          files: dist/StudyLibrary.apk
+          generate_release_notes: true
