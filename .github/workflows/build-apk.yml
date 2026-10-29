@@ -23,19 +23,19 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # Step 1: Poppler Utilities install karein (pdftoppm ke liye jo bohot fast aur safe hai)
-      - name: Install PDF Utilities and Ghostscript
+      # Step 1: pdftoppm aur img2pdf install karein (Sabse stable combination)
+      - name: Install PDF Utilities and img2pdf
         run: |
           sudo apt-get update
-          sudo apt-get install -y poppler-utils ghostscript
+          sudo apt-get install -y poppler-utils img2pdf
 
-      # Step 2: Spaces wale file names ko sahi tarike se handle karein aur image-based banayein
+      # Step 2: PDFs ko safely rasterize (image-based) karein bina Ghostscript ke
       - name: Convert Text PDFs to Image-Based PDFs
         run: |
           if [ -d "www/pdf" ]; then
             mkdir -p temp_pdf_conversion
             
-            # File names ke spaces ko sahi se handle karne ke liye loop ko context diya hai
+            # Spaces wale names ko safely handle karne ke liye
             SAVEIFS=$IFS
             IFS=$(echo -en "\n\b")
             
@@ -44,26 +44,25 @@ jobs:
                 filename=$(basename "$pdf")
                 echo "Converting: $filename"
                 
-                # 1. PDF ke har page ko images (PNG) mein extract karein (150 DPI)
-                mkdir -p "temp_pages"
+                mkdir -p temp_pages
+                
+                # 1. PDF ke pages ko high-quality PNGs mein extract karein
                 pdftoppm -png -r 150 "$pdf" "temp_pages/page"
                 
-                # 2. Un saari images ko wapas ek single non-searchable PDF mein combine kar dein
-                # Double quotes ("") lagaye hain taake spaces ki wajah se error na aaye
-                gs -dNOPAUSE -sDEVICE=pdfwrite -sOUTPUTFILE="temp_pdf_conversion/$filename" -dBATCH temp_pages/page-*.png
+                # 2. img2pdf ke zariye saari images ko wapas ek clean PDF mein convert karein
+                # Yeh wildcard ko natural numeric order mein automatically process karta hai
+                img2pdf temp_pages/page-*.png -o "temp_pdf_conversion/$filename"
                 
-                # Temporary pages ko clean karein agli file ke liye
                 rm -rf temp_pages
               fi
             done
             
-            # IFS ko wapas purani state par le aayein
             IFS=$SAVEIFS
             
-            # Converted files ko wapas original folder mein copy karein
+            # Converted files ko original folder mein overwrite karein
             cp -r temp_pdf_conversion/*.pdf www/pdf/
             rm -rf temp_pdf_conversion
-            echo "All PDFs successfully converted without space errors!"
+            echo "All PDFs successfully converted with img2pdf!"
           else
             echo "Error: 'www/pdf' directory not found!"
             exit 1
