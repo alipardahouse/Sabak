@@ -23,20 +23,28 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # Step 1: ImageMagick aur Ghostscript install karein
+      # Step 1: ImageMagick aur Ghostscript install karein aur correct path policy update karein
       - name: Install ImageMagick and Ghostscript
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick ghostscript
           
-          # PDF read/write ki permission allow karein
-          sudo sed -i 's/domain="coder" rights="none" pattern="PDF"/domain="coder" rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml
+          # Dynamic tariqe se policy.xml ka path find karein (taake v6 ya v7 dono par chale)
+          POLICY_PATH=$(find /etc/ImageMagick* -name "policy.xml" 2>/dev/null | head -n 1)
+          
+          if [ -f "$POLICY_PATH" ]; then
+            echo "Updating policy at: $POLICY_PATH"
+            sudo sed -i 's/domain="coder" rights="none" pattern="PDF"/domain="coder" rights="read|write" pattern="PDF"/' "$POLICY_PATH"
+          else
+            echo "Warning: ImageMagick policy.xml not found at expected locations. Trying manual injection..."
+            # Agar default path badal gaya ho toh direct custom policy line add karne ka backup
+            sudo sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-7/policy.xml || true
+          fi
 
       # Step 2: www/pdf/ folder ke andar maujood saari original PDFs ko Image-Based PDFs se replace karein
       - name: Convert Text PDFs to Image-Based PDFs
         run: |
           if [ -d "www/pdf" ]; then
-            # Pehle ek temporary directory banayein taake original files process hote waqt crash na hon
             mkdir -p temp_pdf_conversion
             
             for pdf in www/pdf/*.pdf; do
@@ -44,12 +52,11 @@ jobs:
                 filename=$(basename "$pdf")
                 echo "Converting $filename to image-based PDF..."
                 
-                # Conversion temp folder mein hogi
+                # Conversion logic
                 convert -density 150 "$pdf" -alpha remove -quality 90 "temp_pdf_conversion/$filename"
               fi
             done
             
-            # Converted files ko wapas original www/pdf folder mein overwrite kar dein
             cp -r temp_pdf_conversion/*.pdf www/pdf/
             rm -rf temp_pdf_conversion
             echo "All PDFs successfully converted and updated in www/pdf/"
