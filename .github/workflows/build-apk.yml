@@ -23,6 +23,41 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      # Step 1: ImageMagick aur Ghostscript install karein
+      - name: Install ImageMagick and Ghostscript
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick ghostscript
+          
+          # PDF read/write ki permission allow karein
+          sudo sed -i 's/domain="coder" rights="none" pattern="PDF"/domain="coder" rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml
+
+      # Step 2: www/pdf/ folder ke andar maujood saari original PDFs ko Image-Based PDFs se replace karein
+      - name: Convert Text PDFs to Image-Based PDFs
+        run: |
+          if [ -d "www/pdf" ]; then
+            # Pehle ek temporary directory banayein taake original files process hote waqt crash na hon
+            mkdir -p temp_pdf_conversion
+            
+            for pdf in www/pdf/*.pdf; do
+              if [ -f "$pdf" ]; then
+                filename=$(basename "$pdf")
+                echo "Converting $filename to image-based PDF..."
+                
+                # Conversion temp folder mein hogi
+                convert -density 150 "$pdf" -alpha remove -quality 90 "temp_pdf_conversion/$filename"
+              fi
+            done
+            
+            # Converted files ko wapas original www/pdf folder mein overwrite kar dein
+            cp -r temp_pdf_conversion/*.pdf www/pdf/
+            rm -rf temp_pdf_conversion
+            echo "All PDFs successfully converted and updated in www/pdf/"
+          else
+            echo "Error: 'www/pdf' directory not found!"
+            exit 1
+          fi
+
       - name: Add PDF.js (offline PDF reader)
         run: |
           npm install
