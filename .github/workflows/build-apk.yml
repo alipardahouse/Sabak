@@ -23,25 +23,31 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # Step 1: ImageMagick aur Ghostscript install karein aur correct path policy update karein
+      # Step 1: ImageMagick install karein aur resource limits ko barhaayein
       - name: Install ImageMagick and Ghostscript
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick ghostscript
           
-          # Dynamic tariqe se policy.xml ka path find karein (taake v6 ya v7 dono par chale)
           POLICY_PATH=$(find /etc/ImageMagick* -name "policy.xml" 2>/dev/null | head -n 1)
           
           if [ -f "$POLICY_PATH" ]; then
-            echo "Updating policy at: $POLICY_PATH"
+            echo "Updating policy and resource limits at: $POLICY_PATH"
+            
+            # 1. PDF read/write permission allow karein
             sudo sed -i 's/domain="coder" rights="none" pattern="PDF"/domain="coder" rights="read|write" pattern="PDF"/' "$POLICY_PATH"
+            
+            # 2. Resource limits ko barhaayein taake 'cache resources exhausted' error na aaye
+            sudo sed -i 's/<policy domain="resource" name="memory" value="[^"]*"\/>/<policy domain="resource" name="memory" value="4GiB"\/>/' "$POLICY_PATH"
+            sudo sed -i 's/<policy domain="resource" name="map" value="[^"]*"\/>/<policy domain="resource" name="map" value="4GiB"\/>/' "$POLICY_PATH"
+            sudo sed -i 's/<policy domain="resource" name="area" value="[^"]*"\/>/<policy domain="resource" name="area" value="2GB"\/>/' "$POLICY_PATH"
+            sudo sed -i 's/<policy domain="resource" name="disk" value="[^"]*"\/>/<policy domain="resource" name="disk" value="10GiB"\/>/' "$POLICY_PATH"
           else
-            echo "Warning: ImageMagick policy.xml not found at expected locations. Trying manual injection..."
-            # Agar default path badal gaya ho toh direct custom policy line add karne ka backup
-            sudo sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-7/policy.xml || true
+            echo "Error: Policy file not found!"
+            exit 1
           fi
 
-      # Step 2: www/pdf/ folder ke andar maujood saari original PDFs ko Image-Based PDFs se replace karein
+      # Step 2: Converted PDFs ko image-based banayein (Optimized Settings)
       - name: Convert Text PDFs to Image-Based PDFs
         run: |
           if [ -d "www/pdf" ]; then
@@ -52,8 +58,8 @@ jobs:
                 filename=$(basename "$pdf")
                 echo "Converting $filename to image-based PDF..."
                 
-                # Conversion logic
-                convert -density 150 "$pdf" -alpha remove -quality 90 "temp_pdf_conversion/$filename"
+                # -limit cache lagaya hai taake safe side memory control mein rahe
+                convert -limit memory 2GiB -limit map 2GiB -density 150 "$pdf" -alpha remove -quality 85 "temp_pdf_conversion/$filename"
               fi
             done
             
