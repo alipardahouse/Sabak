@@ -12,6 +12,7 @@
   --muted: #5d6877;
   --books: #23395d;
   --assignments: #2d6a4f;
+  --solved: #7a4a1e;
   --line: #dde1e7;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -32,6 +33,7 @@ h1 { font-size: 2rem; margin: 0; letter-spacing: -0.02em; }
 .big:active { transform: scale(.98); }
 .books { background: var(--books); }
 .assignments { background: var(--assignments); }
+.solved { background: var(--solved); }
 
 /* Header + list */
 header { display: flex; align-items: center; gap: 8px; padding: 10px 12px;
@@ -60,6 +62,7 @@ header h2 { font-size: 1.1rem; margin: 0; font-weight: 600; }
       <p class="sub">Everything is stored on this phone. No internet needed.</p>
       <button class="big books" data-group="books">Books<span id="count-books"></span></button>
       <button class="big assignments" data-group="assignments">Assignments<span id="count-assignments"></span></button>
+      <button class="big solved" data-group="solved">Solved Assignments<span id="count-solved"></span></button>
     </div>
   </section>
 
@@ -107,14 +110,29 @@ var ASSIGNMENTS = [
 
 ];
 
+var SOLVED = [
+  { title: 'English9833-1.pdf', file: 'English9833-1.pdf' },
+  { title: 'English9833-2.pdf', file: 'English9833-2.pdf' },
+  { title: 'Fundamental463-1.pdf', file: 'Fundamental463-1.pdf' },
+  { title: 'Fundamental463-2.pdf', file: 'Fundamental463-2.pdf' },
+  { title: 'Islamiat416-1.pdf', file: 'Islamiat416-1.pdf' },
+  { title: 'Islamiat416-2.pdf', file: 'Islamiat416-2.pdf' },
+  { title: 'Principal438-1.pdf', file: 'Principal438-1.pdf' },
+  { title: 'Principal438-2.pdf', file: 'Principal438-2.pdf' },
+  { title: 'Quantitative9836-1.pdf', file: 'Quantitative9836-1.pdf' },
+  { title: 'Quantitative9836-2.pdf', file: 'Quantitative9836-2.pdf' },
+];
+
 /* ===================  Iske neeche kuch change na karein  =================== */
 function withFolder(list) {
   return list.map(function (x) { return { title: x.title, file: PDF_FOLDER + '/' + x.file }; });
 }
 var LIBRARY = {
   books:       { title: 'Books',       items: withFolder(BOOKS) },
-  assignments: { title: 'Assignments', items: withFolder(ASSIGNMENTS) }
+  assignments: { title: 'Assignments', items: withFolder(ASSIGNMENTS) },
+  solved:      { title: 'Solved Assignments', items: withFolder(SOLVED) }
 };
+document.getElementById('count-solved').textContent = SOLVED.length + ' PDFs';
 document.getElementById('count-books').textContent = BOOKS.length + ' PDFs';
 document.getElementById('count-assignments').textContent = ASSIGNMENTS.length + ' PDFs';
 (function () {
